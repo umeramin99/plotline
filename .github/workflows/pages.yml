@@ -1,5 +1,5 @@
 # Publishes docs/ to GitHub Pages.
-# Enable once under Settings -> Pages -> Source: GitHub Actions.
+# Enables Pages itself on the first successful run; no Settings visit needed.
 name: Pages
 
 on:
@@ -29,6 +29,11 @@ jobs:
           node-version: '22'
       - run: npm run build
       - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on via the API rather than needing a visit to Settings.
+          # Pages is not available on private repos on the Free plan, so this
+          # step is what fails until the repository is public.
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
