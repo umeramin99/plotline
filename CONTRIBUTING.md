@@ -57,6 +57,23 @@ and the README work straight from a clone. CI fails if they are stale — run
 Dependency arrows between items, week-level columns, and an `@import` for
 splitting a roadmap across files. Open an issue before writing the code.
 
+## Releasing
+
+`action.yml` is consumed as `umeramin99/plotline@v1`, so that ref has to keep
+pointing at a commit where the Action works. It is a **branch**, not a tag, and
+moving it is the release:
+
+```bash
+git push origin main:v1
+```
+
+GitHub resolves `owner/repo@ref` against branches, tags and SHAs alike, so
+callers see no difference. Anyone pinning exactly can use a commit SHA.
+
+Only move `v1` for a change that is backwards compatible for existing callers.
+A breaking change to the Action's inputs or outputs gets a `v2` branch instead,
+so nobody's workflow breaks under them.
+
 ## Pull requests
 
 Keep them focused, include a test, and make sure `npm test`, `npm run build`
