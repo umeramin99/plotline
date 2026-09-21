@@ -1,0 +1,24 @@
+# Keeps assets/roadmap.svg in step with roadmap.md.
+#
+# Copy this into your own repository to get a README roadmap that updates
+# itself whenever someone merges a change to the plan.
+name: Roadmap
+
+on:
+  push:
+    branches: [main]
+    paths: ['roadmap.md', '.github/workflows/roadmap.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ # in your repo: umeramin99/plotline@v1
+        with:
+          input: roadmap.md
+          output: assets/roadmap.svg

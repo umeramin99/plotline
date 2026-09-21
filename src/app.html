@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotline - plain-text roadmaps, rendered</title>
+<meta name="description" content="Write your roadmap as a few lines of Markdown and get a roadmap you can put in front of anyone. Runs entirely in your browser.">
+<meta property="og:title" content="Plotline">
+<meta property="og:description" content="Plain-text roadmaps, rendered. Nothing leaves your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0c14'/%3E%3Crect x='6' y='8' width='16' height='4' rx='2' fill='%237c8cff'/%3E%3Crect x='6' y='14' width='20' height='4' rx='2' fill='%2322d3ee'/%3E%3Crect x='6' y='20' width='11' height='4' rx='2' fill='%2334d399'/%3E%3C/svg%3E">
+<style>/*__PLOTLINE_CSS__*/</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="4" y="7" width="15" height="5" rx="2.5" fill="#7c8cff"/>
+      <rect x="4" y="14" width="24" height="5" rx="2.5" fill="#22d3ee"/>
+      <rect x="4" y="21" width="10" height="5" rx="2.5" fill="#34d399"/>
+    </svg>
+    <b>Plotline</b>
+    <span>plain-text roadmaps, rendered</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="controls">
+    <select id="example" aria-label="Load an example"></select>
+    <select id="theme" aria-label="Theme"></select>
+    <button id="copy">Copy PNG</button>
+    <button id="svg">SVG</button>
+    <button id="png">PNG</button>
+    <button id="share" class="primary">Share link</button>
+    <a class="ghost" id="repo" href="https://github.com/umeramin99/plotline" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head">roadmap.md</div>
+    <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"
+      aria-label="Roadmap source"></textarea>
+  </section>
+  <div class="grip" id="grip" role="separator" aria-orientation="vertical"></div>
+  <section class="pane">
+    <div class="pane-head">preview</div>
+    <div id="stage"></div>
+  </section>
+</main>
+
+<footer>
+  <span id="status" class="ok">ready</span>
+  <div class="issues" id="issues"></div>
+  <div class="spacer"></div>
+  <span>nothing leaves your browser</span>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>/*__PLOTLINE_JS__*/</script>
+</body>
+</html>

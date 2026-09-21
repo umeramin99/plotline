@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+
+  artifacts:
+    name: committed artifacts are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: docs/index.html matches src/
+        run: npm run check
+
+      - name: assets/ match examples/
+        run: |
+          npm run examples
+          git diff --exit-code -- assets/ || {
+            echo "::error::assets/ are stale. Run: npm run examples"
+            exit 1
+          }
+
+      - name: the built app has no leftover placeholders
+        run: |
+          set -euo pipefail
+          for marker in __PLOTLINE_CSS__ __PLOTLINE_JS__; do
+            if grep -q "$marker" docs/index.html; then
+              echo "::error::docs/index.html still contains $marker"
+              exit 1
+            fi
+          done
+          grep -q "<svg" docs/index.html || { echo "::error::no inline logo"; exit 1; }

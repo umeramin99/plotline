@@ -1,0 +1,101 @@
+name: 'Plotline'
+description: 'Render a plain-text roadmap to SVG, and optionally keep it committed so your README stays current.'
+branding:
+  icon: 'map'
+  color: 'purple'
+
+inputs:
+  input:
+    description: 'Roadmap source file.'
+    required: false
+    default: 'roadmap.md'
+  output:
+    description: 'Where to write the SVG.'
+    required: false
+    default: 'assets/roadmap.svg'
+  theme:
+    description: 'aurora, noir, slate, dawn or sunset. Defaults to whatever the file says.'
+    required: false
+    default: ''
+  width:
+    description: 'Canvas width in pixels.'
+    required: false
+    default: ''
+  check:
+    description: 'Fail the job if the roadmap file has problems.'
+    required: false
+    default: 'true'
+  commit:
+    description: 'Commit the SVG back to the branch when it changed.'
+    required: false
+    default: 'true'
+  commit-message:
+    description: 'Commit message used when the SVG changes.'
+    required: false
+    default: 'chore: update roadmap'
+
+outputs:
+  changed:
+    description: 'true when the rendered SVG differed from what was committed.'
+    value: ${{ steps.render.outputs.changed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: render
+      shell: bash
+      env:
+        PL_INPUT: ${{ inputs.input }}
+        PL_OUTPUT: ${{ inputs.output }}
+        PL_THEME: ${{ inputs.theme }}
+        PL_WIDTH: ${{ inputs.width }}
+        PL_CHECK: ${{ inputs.check }}
+        PL_BIN: ${{ github.action_path }}/bin/plotline.mjs
+      run: |
+        set -euo pipefail
+        if [ ! -f "$PL_INPUT" ]; then
+          echo "::error file=$PL_INPUT::Roadmap file not found"
+          exit 1
+        fi
+
+        if [ "$PL_CHECK" = "true" ]; then
+          # Surface problems as annotations, but let the render decide the exit code.
+          node "$PL_BIN" "$PL_INPUT" --check || {
+            echo "::error file=$PL_INPUT::Roadmap has problems (see the log above)"
+            exit 1
+          }
+        fi
+
+        args=("$PL_INPUT" -o "$PL_OUTPUT")
+        [ -n "$PL_THEME" ] && args+=(--theme "$PL_THEME")
+        [ -n "$PL_WIDTH" ] && args+=(--width "$PL_WIDTH")
+
+        mkdir -p "$(dirname "$PL_OUTPUT")"
+        before=$(sha1sum "$PL_OUTPUT" 2>/dev/null | cut -d' ' -f1 || echo none)
+        node "$PL_BIN" "${args[@]}"
+        after=$(sha1sum "$PL_OUTPUT" | cut -d' ' -f1)
+
+        if [ "$before" = "$after" ]; then
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "Roadmap is already up to date."
+        else
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Roadmap changed."
+        fi
+
+    - if: inputs.commit == 'true' && steps.render.outputs.changed == 'true'
+      shell: bash
+      env:
+        PL_OUTPUT: ${{ inputs.output }}
+        PL_MESSAGE: ${{ inputs.commit-message }}
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add -- "$PL_OUTPUT"
+        if git diff --cached --quiet; then
+          echo "Nothing staged; skipping commit."
+          exit 0
+        fi
+        git commit -m "$PL_MESSAGE"
+        git push

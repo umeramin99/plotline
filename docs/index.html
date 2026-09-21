@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotline - plain-text roadmaps, rendered</title>
+<meta name="description" content="Write your roadmap as a few lines of Markdown and get a roadmap you can put in front of anyone. Runs entirely in your browser.">
+<meta property="og:title" content="Plotline">
+<meta property="og:description" content="Plain-text roadmaps, rendered. Nothing leaves your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0c14'/%3E%3Crect x='6' y='8' width='16' height='4' rx='2' fill='%237c8cff'/%3E%3Crect x='6' y='14' width='20' height='4' rx='2' fill='%2322d3ee'/%3E%3Crect x='6' y='20' width='11' height='4' rx='2' fill='%2334d399'/%3E%3C/svg%3E">
+<style>:root {
+  --bg: #0a0c14;
+  --surface: #11141f;
+  --surface-2: #161a28;
+  --line: #242a3d;
+  --line-soft: #1c2133;
+  --ink: #e8ecf8;
+  --ink-2: #99a3c2;
+  --ink-3: #626d8c;
+  --brand: #7c8cff;
+  --brand-2: #22d3ee;
+  --warn: #fbbf24;
+  --radius: 10px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+/* ------------------------------------------------------------------ header */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  height: 56px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #131727, #0f1220);
+  flex: none;
+}
+
+.brand { display: flex; align-items: baseline; gap: 9px; }
+.brand b { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.brand span { font-size: 12.5px; color: var(--ink-3); }
+
+.spacer { flex: 1; }
+
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+select, button {
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s, transform .06s;
+}
+
+select, button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+select:hover, button:hover { border-color: #38405c; background: #1b2032; }
+button:active { transform: translateY(1px); }
+button.primary { background: var(--brand); border-color: var(--brand); color: #0b0e1a; font-weight: 650; }
+button.primary:hover { background: #8e9cff; border-color: #8e9cff; }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+a.ghost { color: var(--ink-2); font-size: 12.5px; text-decoration: none; padding: 7px 4px; }
+a.ghost:hover { color: var(--ink); }
+
+/* ------------------------------------------------------------------- panes */
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--split, 38%) 6px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 11px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 650;
+  flex: none;
+}
+
+textarea {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.68;
+  tab-size: 2;
+}
+
+.grip { background: var(--line-soft); cursor: col-resize; }
+.grip:hover, .grip.active { background: var(--brand); }
+
+#stage {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background-color: #0d1019;
+  background-image: radial-gradient(circle at center, #222840 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+#stage svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+
+/* ------------------------------------------------------------------ status */
+
+footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--ink-3);
+  min-height: 34px;
+}
+
+footer .ok { color: #4ade80; }
+footer .warn { color: var(--warn); }
+footer .issues { display: flex; gap: 14px; overflow-x: auto; white-space: nowrap; }
+footer code { font-family: var(--mono); color: var(--ink-2); }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--ink);
+  color: #0b0e1a;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s, transform .16s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 860px) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 40vh 6px minmax(0, 1fr); }
+  .grip { cursor: row-resize; }
+
+  header { height: auto; padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .brand span { display: none; }
+  .spacer { display: none; }
+
+  /* A fixed grid cannot overflow the way wrapped flex items can: two selects
+     on one row, four buttons on the next. */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+  .controls select { grid-column: span 2; }
+  button { padding: 7px 6px; }
+  a.ghost { display: none; }
+}
+
+@media (max-width: 420px) {
+  footer span:last-child { display: none; }
+}</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="4" y="7" width="15" height="5" rx="2.5" fill="#7c8cff"/>
+      <rect x="4" y="14" width="24" height="5" rx="2.5" fill="#22d3ee"/>
+      <rect x="4" y="21" width="10" height="5" rx="2.5" fill="#34d399"/>
+    </svg>
+    <b>Plotline</b>
+    <span>plain-text roadmaps, rendered</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="controls">
+    <select id="example" aria-label="Load an example"></select>
+    <select id="theme" aria-label="Theme"></select>
+    <button id="copy">Copy PNG</button>
+    <button id="svg">SVG</button>
+    <button id="png">PNG</button>
+    <button id="share" class="primary">Share link</button>
+    <a class="ghost" id="repo" href="https://github.com/umeramin99/plotline" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head">roadmap.md</div>
+    <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"
+      aria-label="Roadmap source"></textarea>
+  </section>
+  <div class="grip" id="grip" role="separator" aria-orientation="vertical"></div>
+  <section class="pane">
+    <div class="pane-head">preview</div>
+    <div id="stage"></div>
+  </section>
+</main>
+
+<footer>
+  <span id="status" class="ok">ready</span>
+  <div class="issues" id="issues"></div>
+  <div class="spacer"></div>
+  <span>nothing leaves your browser</span>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>(() => {
+"use strict";
+const PLOTLINE_EXAMPLES = {
+  "Checkout Squad": "# Checkout Squad\n> What we are doing, what is queued, what we have parked\n\n@theme slate\n@footer off\n\n## Now\n- Guest checkout without an account ~70% +dee #conversion\n  - Cuts a 4-step flow down to 1\n- Apple Pay and Google Pay ~40% +marcus #payments\n- Fix the duplicate-charge race !blocked #payments\n\n## Next\n- Saved cards in the wallet #payments\n- Address autocomplete #conversion\n- One-tap reorder +dee\n\n## Later\n- Split payments across cards\n- Buy now, pay later partners #payments\n- Subscription checkout\n\n## Shipped\n- New card form !done ~100% #payments\n- Inline validation !done ~100% +dee\n",
+  "Orbit 2026": "# Orbit 2026\n> Platform and growth bets for the year\n\n@timeline Q1 2026 -> Q4 2026\n@today 2026-05-14\n@theme aurora\n\n## Growth\n- Passwordless onboarding @q1..q2 ~80% +ana-rivera #growth\n- Referral loops v2 @q2..q3 #growth !risk\n- Pricing page rebuild @q1 ~100% +joel !done\n\n## Platform\n- Multi-region rollout @q1..q4 ~35% +sam-okafor #infra\n- Event bus migration @q2..q3 #infra\n- Kill the legacy cron runner\n\n## Mobile\n- Offline mode @q3..q4 +priya #mobile\n- Push notification overhaul @q2..q3 ~20% #mobile !blocked\n",
+  "Plotline": "# Plotline\n> The roadmap for this project, rendered by this project\n\n@timeline Q1 2026 -> Q4 2026\n@today now\n@theme sunset\n\n## Core\n- Timeline and board rendering @q1 ~100% !done #core\n- Month and year columns @q1..q2 ~100% !done #core\n- Dependency arrows between items @q3..q4 #core\n\n## Tooling\n- CLI with --check for CI @q1 ~100% !done #tooling\n- VS Code live preview @q2..q3 #tooling\n- GitHub Action that commits the SVG @q2 ~60% #tooling\n\n## Reach\n- Ship more themes @q2..q3 ~30%\n- Figma and Keynote export @q3..q4\n- Tell people it exists @q1..q4 ~15%\n"
+};
+const PLOTLINE_EXAMPLE_ORDER = ["Orbit 2026","Plotline","Checkout Squad"];
+
+/**
+ * Text measurement without a DOM.
+ *
+ * The renderer runs in three places -- browser, CLI, CI -- and all three must
+ * produce byte-identical SVG. Asking the DOM for text metrics would break that,
+ * so we approximate advance widths from a table calibrated against Inter and the
+ * common system-ui stack. Accurate to a few percent, which is all truncation and
+ * wrapping need.
+ */
+
+const NARROW = "il|.,:;'`!Ijft()[]{}/\\-";
+const WIDE = 'mwMW';
+
+/** Advance width of a single character, as a multiple of the font size. */
+function charWidth(ch) {
+  if (ch === ' ') return 0.28;
+  if (ch === '%') return 0.87;
+  if (ch === '\u2014') return 0.92; // em dash
+  if (ch === '\u2013') return 0.55; // en dash
+  if (ch === '\u2026') return 0.88; // ellipsis
+  if (NARROW.includes(ch)) return ch === 'i' || ch === 'l' || ch === '|' || ch === '.' || ch === ',' ? 0.3 : 0.38;
+  if (WIDE.includes(ch)) return 0.9;
+  if (ch >= '0' && ch <= '9') return 0.62;
+  if (ch >= 'A' && ch <= 'Z') return 0.68;
+  if (ch >= 'a' && ch <= 'z') return 0.55;
+  // Anything else (punctuation, emoji, CJK) gets a conservative guess.
+  return ch.codePointAt(0) > 0x2e80 ? 1 : 0.58;
+}
+
+/** Width of `text` rendered at `size` px in `weight`. */
+// The stack falls back to whatever the machine has, and most fallbacks are a
+// little wider than Inter. A small margin is cheaper than overlapping text.
+const SAFETY = 1.1;
+
+function textWidth(text, size = 13, weight = 400) {
+  let units = 0;
+  for (const ch of String(text)) units += charWidth(ch);
+  const bolding = weight >= 600 ? 1.09 : 1;
+  return units * size * bolding * SAFETY;
+}
+
+/** Shorten `text` with an ellipsis so it fits inside `maxWidth`. */
+function truncate(text, size, maxWidth, weight = 400) {
+  const str = String(text);
+  if (maxWidth <= 0) return '';
+  if (textWidth(str, size, weight) <= maxWidth) return str;
+  const ellipsis = textWidth('\u2026', size, weight);
+  let out = '';
+  let used = 0;
+  for (const ch of str) {
+    const w = charWidth(ch) * size * (weight >= 600 ? 1.09 : 1) * SAFETY;
+    if (used + w + ellipsis > maxWidth) break;
+    out += ch;
+    used += w;
+  }
+  return out.replace(/\s+$/, '') + '\u2026';
+}
+
+/** Greedy word wrap. Returns at most `maxLines` lines, last one ellipsised. */
+function wrapText(text, size, maxWidth, weight = 400, maxLines = 2) {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? line + ' ' + word : word;
+    if (textWidth(candidate, size, weight) <= maxWidth || !line) {
+      line = candidate;
+    } else {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) break;
+    }
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length === maxLines) {
+    const consumed = lines.join(' ').length;
+    const rest = String(text).slice(consumed).trim();
+    if (rest) lines[maxLines - 1] = truncate(lines[maxLines - 1] + ' ' + rest, size, maxWidth, weight);
+    else lines[maxLines - 1] = truncate(lines[maxLines - 1], size, maxWidth, weight);
+  }
+  return lines;
+}
+/* --- end measure.js --- */
+
+/**
+ * Palettes.
+ *
+ * Bars are drawn as an accent colour at low opacity over the lane background,
+ * so label text always uses `text` and never needs a contrast calculation
+ * against the accent itself. That is what keeps every theme readable without
+ * per-colour tuning.
+ */
+
+const FONT = "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
+const THEMES = {
+  aurora: {
+    label: 'Aurora',
+    dark: true,
+    font: FONT,
+    bg: '#0B1020',
+    bgGlow: '#161F3D',
+    panel: '#121A33',
+    lane: '#141D38',
+    laneAlt: '#101831',
+    border: '#243056',
+    grid: '#2A3766',
+    text: '#EEF2FF',
+    muted: '#93A0C8',
+    faint: '#5C6A94',
+    accents: ['#818CF8', '#22D3EE', '#34D399', '#F472B6', '#FBBF24', '#A78BFA', '#4ADE80', '#FB7185'],
+    ok: '#34D399',
+    warn: '#FBBF24',
+    danger: '#FB7185',
+    today: '#22D3EE',
+  },
+  noir: {
+    label: 'Noir',
+    dark: true,
+    font: FONT,
+    bg: '#0A0A0B',
+    bgGlow: '#17171A',
+    panel: '#121214',
+    lane: '#141416',
+    laneAlt: '#101011',
+    border: '#2A2A2E',
+    grid: '#323238',
+    text: '#F4F4F5',
+    muted: '#A1A1AA',
+    faint: '#63636B',
+    accents: ['#FAFAFA', '#A1A1AA', '#F97316', '#D4D4D8', '#71717A', '#FDBA74', '#E4E4E7', '#52525B'],
+    ok: '#A3E635',
+    warn: '#F97316',
+    danger: '#F87171',
+    today: '#F97316',
+  },
+  slate: {
+    label: 'Slate',
+    dark: false,
+    font: FONT,
+    bg: '#FFFFFF',
+    bgGlow: '#F1F5F9',
+    panel: '#F8FAFC',
+    lane: '#F8FAFC',
+    laneAlt: '#F1F5F9',
+    border: '#E2E8F0',
+    grid: '#CBD5E1',
+    text: '#0F172A',
+    muted: '#64748B',
+    faint: '#94A3B8',
+    accents: ['#4F46E5', '#0891B2', '#059669', '#DB2777', '#D97706', '#7C3AED', '#16A34A', '#E11D48'],
+    ok: '#059669',
+    warn: '#D97706',
+    danger: '#E11D48',
+    today: '#4F46E5',
+  },
+  dawn: {
+    label: 'Dawn',
+    dark: false,
+    font: FONT,
+    bg: '#FFFCF7',
+    bgGlow: '#FDF1E3',
+    panel: '#FDF6EC',
+    lane: '#FDF5EA',
+    laneAlt: '#FBEEDC',
+    border: '#EADBC6',
+    grid: '#DFC9AB',
+    text: '#26201A',
+    muted: '#7A6A57',
+    faint: '#A6937B',
+    accents: ['#C2410C', '#0F766E', '#7C2D12', '#B45309', '#9D174D', '#15803D', '#A16207', '#BE123C'],
+    ok: '#15803D',
+    warn: '#B45309',
+    danger: '#BE123C',
+    today: '#C2410C',
+  },
+  sunset: {
+    label: 'Sunset',
+    dark: true,
+    font: FONT,
+    bg: '#1A0B1F',
+    bgGlow: '#3A1230',
+    panel: '#25102C',
+    lane: '#2A1332',
+    laneAlt: '#220F2A',
+    border: '#4A2149',
+    grid: '#5C2A58',
+    text: '#FDF2F8',
+    muted: '#D8A8C8',
+    faint: '#9C6E91',
+    accents: ['#FB923C', '#F472B6', '#FCD34D', '#C084FC', '#FB7185', '#FDBA74', '#E879F9', '#FCA5A5'],
+    ok: '#86EFAC',
+    warn: '#FCD34D',
+    danger: '#FB7185',
+    today: '#FB923C',
+  },
+};
+
+const THEME_NAMES = Object.keys(THEMES);
+const DEFAULT_THEME = 'aurora';
+
+function getTheme(name) {
+  return THEMES[String(name || '').toLowerCase()] || THEMES[DEFAULT_THEME];
+}
+/* --- end themes.js --- */
+
+/**
+ * The Plotline format.
+ *
+ * It is Markdown, on purpose: a roadmap should stay readable in a pull request
+ * diff and on GitHub's file view without any tooling at all.
+ *
+ *   # Title                     first h1
+ *   > Subtitle                  blockquote
+ *   @timeline Q1 2026 -> Q4 2026   directive
+ *   ## Lane                     h2+ becomes a lane (timeline) or column (board)
+ *   - Item @q1..q2 ~60% +ana #growth !risk
+ *     - a note on the item      indented bullet
+ *
+ * Item modifiers are only recognised as *trailing* tokens, so an email address
+ * or a "#1" in the middle of a title is left alone.
+ */
+
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const STATUSES = new Set(['done', 'shipped', 'risk', 'blocked', 'now']);
+const RANGE_SPLIT = /\s*(?:\.\.\.?|->|→)\s*|\s+to\s+/i;
+
+const key = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Parse a Plotline document into a plain model. Never throws. */
+function parse(source = '') {
+  const doc = {
+    title: '',
+    subtitle: '',
+    theme: DEFAULT_THEME,
+    width: 1200,
+    footer: 'made with plotline',
+    mode: null,
+    todaySpec: null,
+    columns: [],
+    lanes: [],
+    warnings: [],
+  };
+
+  const lines = String(source).replace(/\r\n?/g, '\n').split('\n');
+  const rawItems = []; // items are resolved against columns after the whole doc is read
+  let lane = null;
+  let lastItem = null;
+
+  lines.forEach((raw, index) => {
+    const ln = index + 1;
+    const indent = raw.match(/^[ \t]*/)[0].replace(/\t/g, '  ').length;
+    const line = raw.trim();
+    if (!line || line.startsWith('//')) return;
+
+    if (line.startsWith('@')) {
+      directive(doc, line, ln);
+      lastItem = null;
+      return;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      const text = heading[2].trim();
+      if (heading[1].length === 1 && !doc.title) doc.title = text;
+      else if (text) {
+        lane = { name: text, items: [] };
+        doc.lanes.push(lane);
+      }
+      lastItem = null;
+      return;
+    }
+
+    if (line.startsWith('>')) {
+      const text = line.replace(/^>\s?/, '').trim();
+      doc.subtitle = doc.subtitle ? doc.subtitle + ' ' + text : text;
+      return;
+    }
+
+    const bullet = line.match(/^[-*+]\s+(.*)$/);
+    if (bullet) {
+      const text = bullet[1].trim();
+      if (indent >= 2 && lastItem) {
+        lastItem.notes.push(stripModifiers(text).title);
+        return;
+      }
+      if (!lane) {
+        lane = { name: '', items: [] };
+        doc.lanes.push(lane);
+      }
+      const parsed = stripModifiers(text);
+      if (/(?:^|\s)[@~+](?![\s@~+])\S/.test(parsed.title)) {
+        doc.warnings.push({
+          line: ln,
+          message: 'Modifiers must be the last tokens on the line. Use +first-last for multi-word owners.',
+        });
+      }
+      const item = { ...parsed, notes: [], line: ln, span: null };
+      lane.items.push(item);
+      rawItems.push(item);
+      lastItem = item;
+      return;
+    }
+
+    // A bare line directly under an item is a note; otherwise it is a stray.
+    if (lastItem && indent >= 2) lastItem.notes.push(line);
+    else doc.warnings.push({ line: ln, message: `Ignored: "${truncateMsg(line)}"` });
+  });
+
+  if (!doc.mode) doc.mode = doc.columns.length ? 'timeline' : 'board';
+  if (doc.mode === 'timeline' && !doc.columns.length) {
+    doc.warnings.push({ line: 0, message: 'Timeline mode needs @timeline or @columns; showing a board instead.' });
+    doc.mode = 'board';
+  }
+
+  if (doc.mode === 'timeline') {
+    for (const item of rawItems) {
+      if (!item.spanText) continue;
+      const span = resolveSpan(item.spanText, doc.columns);
+      if (span) item.span = span;
+      else doc.warnings.push({ line: item.line, message: `Unknown date "${item.spanText}" — item shown as unscheduled.` });
+    }
+  }
+
+  doc.lanes = doc.lanes.filter((l) => l.items.length || l.name);
+  return doc;
+}
+
+function directive(doc, line, ln) {
+  const match = line.match(/^@([a-zA-Z][\w-]*)\s*(.*)$/);
+  if (!match) return;
+  const name = match[1].toLowerCase();
+  const value = match[2].trim();
+
+  switch (name) {
+    case 'title':
+      doc.title = value;
+      break;
+    case 'subtitle':
+      doc.subtitle = value;
+      break;
+    case 'theme':
+      if (THEMES[value.toLowerCase()]) doc.theme = value.toLowerCase();
+      else doc.warnings.push({ line: ln, message: `Unknown theme "${value}". Try: ${Object.keys(THEMES).join(', ')}.` });
+      break;
+    case 'width': {
+      const n = parseInt(value, 10);
+      if (Number.isFinite(n)) doc.width = Math.min(4000, Math.max(480, n));
+      else doc.warnings.push({ line: ln, message: `@width needs a number, got "${value}".` });
+      break;
+    }
+    case 'mode':
+      if (value === 'board' || value === 'timeline') doc.mode = value;
+      else doc.warnings.push({ line: ln, message: '@mode must be "board" or "timeline".' });
+      break;
+    case 'footer':
+      doc.footer = /^(off|none|false)$/i.test(value) ? '' : value;
+      break;
+    case 'today':
+      doc.todaySpec = value || 'now';
+      break;
+    case 'timeline': {
+      const cols = buildTimeline(value);
+      if (cols.length) doc.columns = cols;
+      else doc.warnings.push({ line: ln, message: `Could not read the range "${value}". Try "Q1 2026 -> Q4 2026".` });
+      break;
+    }
+    case 'columns': {
+      const labels = value.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean);
+      if (labels.length) doc.columns = labels.map((label) => ({ label, key: key(label), start: null, end: null }));
+      else doc.warnings.push({ line: ln, message: '@columns needs a comma-separated list.' });
+      break;
+    }
+    default:
+      doc.warnings.push({ line: ln, message: `Unknown directive "@${name}".` });
+  }
+}
+
+/** Pull trailing `@span ~50% +owner #tag !status` tokens off an item line. */
+function stripModifiers(text) {
+  const out = { title: '', spanText: null, progress: null, owner: '', tags: [], status: '' };
+  let rest = String(text).trim();
+
+  // +"Ana Rivera" is pulled out first so the space inside it survives tokenising.
+  rest = rest.replace(/\+"([^"]+)"\s*$/, (_, name) => {
+    out.owner = name.trim();
+    return '';
+  });
+
+  const words = rest.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return { ...out, title: '' };
+  while (words.length > 1) {
+    const word = words[words.length - 1];
+    let matched = true;
+    if (/^@\S+$/.test(word) && !out.spanText) out.spanText = word.slice(1);
+    else if (/^~\d{1,3}%?$/.test(word) && out.progress === null) out.progress = Math.min(100, parseInt(word.slice(1), 10)) / 100;
+    else if (/^\+\S+$/.test(word) && !out.owner) out.owner = word.slice(1).replace(/[_-]+/g, ' ');
+    else if (/^#[\w-]+$/.test(word)) out.tags.unshift(word.slice(1).toLowerCase());
+    else if (/^![\w-]+$/.test(word) && STATUSES.has(word.slice(1).toLowerCase())) out.status = word.slice(1).toLowerCase();
+    else matched = false;
+    if (!matched) break;
+    words.pop();
+  }
+  out.title = words.join(' ').replace(/\s*[:—-]\s*$/, '').trim();
+  return out;
+}
+
+/** "Q1 2026 -> Q4 2026", "Jan 2026 .. Jun 2026", "2026 -> 2028". */
+function buildTimeline(spec) {
+  const parts = String(spec).split(RANGE_SPLIT).map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return [];
+  const from = parsePoint(parts[0]);
+  const to = parsePoint(parts[1] || parts[0]);
+  if (!from || !to) return [];
+  const unit = from.unit;
+  if (to.unit !== unit) return [];
+
+  const columns = [];
+  let cursor = { ...from };
+  const limit = unit === 'month' ? 60 : unit === 'quarter' ? 40 : 30;
+  for (let guard = 0; guard < limit; guard += 1) {
+    columns.push(makeColumn(cursor));
+    if (cursor.year === to.year && cursor.index === to.index) break;
+    if (cursor.year > to.year || (cursor.year === to.year && cursor.index > to.index)) break;
+    cursor = advance(cursor);
+  }
+  return columns;
+}
+
+function parsePoint(text) {
+  const raw = String(text).trim();
+  let m = raw.match(/^q([1-4])\s*'?(\d{2,4})$/i);
+  if (m) return { unit: 'quarter', index: +m[1] - 1, year: fullYear(m[2]) };
+  m = raw.match(/^(\d{4})[-\s]*q([1-4])$/i);
+  if (m) return { unit: 'quarter', index: +m[2] - 1, year: +m[1] };
+  m = raw.match(/^([a-z]{3,9})\.?\s*'?(\d{2,4})$/i);
+  if (m) {
+    const idx = MONTHS.indexOf(m[1].slice(0, 3).toLowerCase());
+    if (idx >= 0) return { unit: 'month', index: idx, year: fullYear(m[2]) };
+  }
+  m = raw.match(/^(\d{4})-(\d{1,2})$/);
+  if (m && +m[2] >= 1 && +m[2] <= 12) return { unit: 'month', index: +m[2] - 1, year: +m[1] };
+  m = raw.match(/^(\d{4})$/);
+  if (m) return { unit: 'year', index: 0, year: +m[1] };
+  return null;
+}
+
+const fullYear = (y) => (String(y).length <= 2 ? 2000 + Number(y) : Number(y));
+
+function makeColumn(point) {
+  if (point.unit === 'quarter') {
+    const label = `Q${point.index + 1} ${point.year}`;
+    return { label, key: key(label), start: utc(point.year, point.index * 3), end: utc(point.year, point.index * 3 + 3) };
+  }
+  if (point.unit === 'month') {
+    const label = `${MONTH_LABELS[point.index]} ${point.year}`;
+    return { label, key: key(label), start: utc(point.year, point.index), end: utc(point.year, point.index + 1) };
+  }
+  const label = String(point.year);
+  return { label, key: key(label), start: utc(point.year, 0), end: utc(point.year + 1, 0) };
+}
+
+function advance(point) {
+  const per = point.unit === 'quarter' ? 4 : point.unit === 'month' ? 12 : 1;
+  const next = point.index + 1;
+  return next >= per ? { ...point, index: 0, year: point.year + 1 } : { ...point, index: next };
+}
+
+const utc = (year, month) => Date.UTC(year, month, 1);
+
+/**
+ * Resolve "q1..q3", "2", "2026-02-14..2026-06-01" to fractional column offsets.
+ * Returns [start, end] in column space, or null when nothing matches.
+ */
+function resolveSpan(text, columns) {
+  if (!columns.length) return null;
+  const parts = String(text).split(RANGE_SPLIT).map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return null;
+
+  // Resolve each endpoint to the full column it names, then take the outer
+  // edges. Doing it this way means "q4..q1" reads the same as "q1..q4".
+  const from = { start: resolvePoint(parts[0], columns, 'start'), end: resolvePoint(parts[0], columns, 'end') };
+  const to = parts[1]
+    ? { start: resolvePoint(parts[1], columns, 'start'), end: resolvePoint(parts[1], columns, 'end') }
+    : from;
+  if ([from.start, from.end, to.start, to.end].some((v) => v === null)) return null;
+
+  const start = Math.max(0, Math.min(from.start, to.start));
+  const end = Math.min(columns.length, Math.max(from.end, to.end));
+  return end - start < 0.08 ? [start, Math.min(columns.length, start + 0.08)] : [start, end];
+}
+
+function resolvePoint(text, columns, edge) {
+  const raw = String(text).trim();
+
+  if (/^\d{1,2}$/.test(raw) && +raw >= 1 && +raw <= columns.length) {
+    return edge === 'start' ? +raw - 1 : +raw;
+  }
+
+  const iso = raw.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
+  if (iso && columns[0].start !== null) {
+    const time = Date.UTC(+iso[1], +iso[2] - 1, iso[3] ? +iso[3] : 1);
+    return dateToOffset(time, columns);
+  }
+
+  const k = key(raw);
+  if (!k) return null;
+  const matches = columns.map((c, i) => [c, i]).filter(([c]) => c.key.startsWith(k));
+  const pool = matches.length ? matches : columns.map((c, i) => [c, i]).filter(([c]) => c.key.includes(k));
+  if (!pool.length) return null;
+  const [, index] = edge === 'start' ? pool[0] : pool[pool.length - 1];
+  return edge === 'start' ? index : index + 1;
+}
+
+/** Map a timestamp onto fractional column space, clamped to the chart. */
+function dateToOffset(time, columns) {
+  if (!columns.length || columns[0].start === null) return null;
+  if (time <= columns[0].start) return 0;
+  const last = columns[columns.length - 1];
+  if (time >= last.end) return columns.length;
+  for (let i = 0; i < columns.length; i += 1) {
+    const col = columns[i];
+    if (time >= col.start && time < col.end) return i + (time - col.start) / (col.end - col.start);
+  }
+  return columns.length;
+}
+
+/** Where the `@today` marker sits, or null. */
+function todayOffset(doc, now = Date.now()) {
+  if (!doc.todaySpec || doc.mode !== 'timeline') return null;
+  const spec = String(doc.todaySpec).trim();
+  if (/^(now|today)$/i.test(spec)) return dateToOffset(now, doc.columns);
+  const span = resolveSpan(spec, doc.columns);
+  return span ? span[0] : null;
+}
+
+const truncateMsg = (s) => (s.length > 40 ? s.slice(0, 37) + '…' : s);
+/* --- end parse.js --- */
+
+/**
+ * Model -> SVG string.
+ *
+ * Deliberate constraints, so the same output works in a browser, a README, a
+ * canvas export and Figma:
+ *   - no <style> blocks (GitHub's SVG sanitiser is picky), presentation
+ *     attributes only;
+ *   - no foreignObject and no external references, so canvas rasterising never
+ *     taints and PNG export keeps working;
+ *   - no clipPath: progress fills are their own rounded rects, so nothing
+ *     overflows if a renderer drops the clip.
+ */
+
+const PAD = 32;
+const ROW = 40;
+const BAR = 30;
+const RADIUS = 9;
+
+function render(doc, options = {}) {
+  const theme = getTheme(options.theme || doc.theme);
+  const width = Math.min(4000, Math.max(480, options.width || doc.width || 1200));
+  const now = options.now ?? Date.now();
+  const colors = palette(doc, theme);
+  return doc.mode === 'timeline' && doc.columns.length
+    ? timeline(doc, theme, width, colors, now)
+    : board(doc, theme, width, colors);
+}
+
+/* ------------------------------------------------------------------ colour */
+
+function palette(doc, theme) {
+  const accents = theme.accents;
+  const lanes = new Map();
+  doc.lanes.forEach((lane, i) => lanes.set(lane, accents[i % accents.length]));
+
+  const tags = new Map();
+  let next = doc.lanes.length;
+  for (const lane of doc.lanes) {
+    for (const item of lane.items) {
+      for (const tag of item.tags) {
+        if (!tags.has(tag)) {
+          tags.set(tag, accents[next % accents.length]);
+          next += 1;
+        }
+      }
+    }
+  }
+
+  const item = (it, lane) => (it.tags.length && tags.get(it.tags[0])) || lanes.get(lane) || accents[0];
+
+  // A lane's stripe takes the colour its own bars mostly use, so the stripe and
+  // the bars beside it never disagree.
+  const stripes = new Map();
+  for (const lane of doc.lanes) {
+    const tally = new Map();
+    for (const it of lane.items) {
+      const c = item(it, lane);
+      tally.set(c, (tally.get(c) || 0) + 1);
+    }
+    const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    stripes.set(lane, top ? top[0] : lanes.get(lane));
+  }
+
+  return { tags, item, lane: (lane) => stripes.get(lane) || lanes.get(lane) || accents[0] };
+}
+
+/* ----------------------------------------------------------------- shared  */
+
+function head(doc, theme, width, colors, out) {
+  let y = PAD;
+  if (doc.title) {
+    out.push(text(PAD, y + 24, doc.title, { size: 30, weight: 700, fill: theme.text, spacing: -0.6 }));
+    y += 36;
+  }
+  if (doc.subtitle) {
+    out.push(text(PAD, y + 11, doc.subtitle, { size: 14.5, fill: theme.muted }));
+    y += 24;
+  }
+
+  if (colors.tags.size) legend(theme, width, colors, out);
+  return doc.title || doc.subtitle ? y + 16 : PAD;
+}
+
+function legend(theme, width, colors, out) {
+  const size = 11.5;
+  const entries = [...colors.tags.entries()].slice(0, 6);
+  const widths = entries.map(([tag]) => 9 + 6 + textWidth(tag, size, 600));
+  const total = widths.reduce((a, b) => a + b, 0) + 16 * (entries.length - 1);
+  if (total > width * 0.46) return;
+
+  let x = width - PAD - total;
+  entries.forEach(([tag, colour], i) => {
+    out.push(`<circle cx="${r2(x + 4)}" cy="${PAD + 12}" r="4" fill="${colour}"/>`);
+    out.push(text(x + 15, PAD + 16, tag, { size, weight: 600, fill: theme.muted }));
+    x += widths[i] + 16;
+  });
+}
+
+function foot(doc, theme, width, y, out) {
+  if (!doc.footer) return y + PAD;
+  out.push(text(PAD, y + 20, doc.footer, { size: 11.5, fill: theme.faint, spacing: 0.3 }));
+  return y + 42;
+}
+
+function frame(theme, width, height) {
+  return [
+    `<defs><radialGradient id="plGlow" cx="14%" cy="0%" r="92%">`,
+    `<stop offset="0%" stop-color="${theme.bgGlow}" stop-opacity="${theme.dark ? 0.85 : 0.6}"/>`,
+    `<stop offset="100%" stop-color="${theme.bgGlow}" stop-opacity="0"/>`,
+    `</radialGradient></defs>`,
+    `<rect x="0" y="0" width="${width}" height="${height}" rx="20" fill="${theme.bg}"/>`,
+    `<rect x="0" y="0" width="${width}" height="${height}" rx="20" fill="url(#plGlow)"/>`,
+    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="19.5" fill="none" stroke="${theme.border}"/>`,
+  ].join('');
+}
+
+const doc2svg = (theme, width, height, body) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ` +
+  `font-family="${esc(theme.font)}" role="img">` +
+  frame(theme, width, height) +
+  body +
+  '</svg>';
+
+/* --------------------------------------------------------------- timeline  */
+
+function timeline(doc, theme, width, colors, now) {
+  const out = [];
+  const gutter = Math.round(Math.min(200, Math.max(104, width * 0.15)));
+  const trackX = PAD + gutter;
+  const trackW = width - PAD * 2 - gutter;
+  const colW = trackW / doc.columns.length;
+
+  const top = head(doc, theme, width, colors, out);
+  // Tall enough that the TODAY pill sits below the column labels, not on them.
+  const headerH = 48;
+  const lanesTop = top + headerH + 8;
+
+  // Lane geometry first: grid and the today marker need the full extent.
+  let y = lanesTop;
+  const lanes = doc.lanes.map((lane) => {
+    const rows = Math.max(1, lane.items.length);
+    const height = 14 + rows * ROW + 10;
+    const box = { lane, y, height, rows };
+    y += height + 10;
+    return box;
+  });
+  const lanesBottom = lanes.length ? y - 10 : lanesTop;
+
+  // Column headers.
+  doc.columns.forEach((col, i) => {
+    const cx = trackX + colW * (i + 0.5);
+    out.push(text(cx, top + 15, col.label.toUpperCase(), {
+      size: 11, weight: 700, fill: theme.muted, anchor: 'middle', spacing: 1.1,
+    }));
+  });
+  out.push(line(PAD, top + headerH, width - PAD, top + headerH, theme.border));
+
+  // Lane bands.
+  lanes.forEach((box, i) => {
+    out.push(rect(PAD, box.y, width - PAD * 2, box.height, 14, {
+      fill: i % 2 ? theme.laneAlt : theme.lane,
+    }));
+  });
+
+  // Column grid, drawn over the bands but under the bars.
+  for (let i = 1; i < doc.columns.length; i += 1) {
+    const x = trackX + colW * i;
+    out.push(line(x, top + headerH, x, lanesBottom, theme.grid, { opacity: 0.4 }));
+  }
+
+  // Today marker.
+  const today = todayOffset(doc, now);
+  if (today !== null) {
+    const x = trackX + colW * today;
+    out.push(line(x, top + 44, x, lanesBottom, theme.today, { opacity: 0.55, dash: '5 5', w: 2 }));
+    const label = 'TODAY';
+    const w = textWidth(label, 10, 700) + 18;
+    out.push(rect(x - w / 2, top + 24, w, 18, 9, { fill: theme.today }));
+    out.push(text(x, top + 37, label, {
+      size: 10, weight: 700, anchor: 'middle', spacing: 0.8,
+      fill: theme.dark ? theme.bg : '#FFFFFF',
+    }));
+  }
+
+  // Lanes and bars.
+  lanes.forEach((box) => {
+    const accent = colors.lane(box.lane);
+    if (box.lane.name) {
+      out.push(rect(PAD + 14, box.y + 14, 3, box.height - 28, 2, { fill: accent }));
+      const nameLines = wrapText(box.lane.name, 13, gutter - 42, 600, 2);
+      const startY = box.y + box.height / 2 - (nameLines.length - 1) * 8.5;
+      nameLines.forEach((ln, i) => {
+        out.push(text(PAD + 27, startY + i * 17 + 4.5, ln, { size: 13, weight: 600, fill: theme.text }));
+      });
+    }
+
+    const rowsTop = box.y + (box.height - box.rows * ROW) / 2;
+    box.lane.items.forEach((item, i) => {
+      const barY = rowsTop + i * ROW + (ROW - BAR) / 2;
+      bar(item, box.lane, barY, { theme, colors, trackX, trackW, colW, out });
+    });
+  });
+
+  const end = foot(doc, theme, width, lanesBottom, out);
+  return doc2svg(theme, width, Math.round(end), out.join(''));
+}
+
+function bar(item, lane, y, ctx) {
+  const { theme, colors, trackX, trackW, colW, out } = ctx;
+  const accent = colors.item(item, lane);
+  const statusColour = { done: theme.ok, shipped: theme.ok, risk: theme.warn, blocked: theme.danger, now: accent }[item.status];
+
+  // No date? Show it honestly rather than guessing a position.
+  if (!item.span) {
+    out.push(rect(trackX + 3, y, trackW - 6, BAR, RADIUS, {
+      fill: 'none', stroke: theme.faint, dash: '4 4', opacity: 0.75,
+    }));
+    out.push(text(trackX + 14, y + BAR / 2 + 4.5, truncate(item.title, 13, trackW - 100, 500), {
+      size: 13, weight: 500, fill: theme.muted,
+    }));
+    out.push(text(trackX + trackW - 14, y + BAR / 2 + 4, 'no date', {
+      size: 10.5, weight: 600, fill: theme.faint, anchor: 'end', spacing: 0.5,
+    }));
+    return;
+  }
+
+  const x = trackX + item.span[0] * colW + 3;
+  const w = Math.max(28, (item.span[1] - item.span[0]) * colW - 6);
+  const risky = item.status === 'risk' || item.status === 'blocked';
+
+  out.push(rect(x, y, w, BAR, RADIUS, { fill: accent, opacity: 0.16 }));
+  if (item.progress) {
+    const pw = Math.max(4, w * item.progress);
+    out.push(rect(x, y, pw, BAR, Math.min(RADIUS, pw / 2), { fill: accent, opacity: 0.44 }));
+  }
+  out.push(rect(x + 0.5, y + 0.5, w - 1, BAR - 1, RADIUS - 0.5, {
+    fill: 'none',
+    stroke: risky ? statusColour : accent,
+    opacity: risky ? 0.85 : 0.45,
+    dash: risky ? '5 4' : null,
+  }));
+
+  let labelX = x + 12;
+  if (statusColour) {
+    out.push(`<circle cx="${r2(x + 13)}" cy="${r2(y + BAR / 2)}" r="4" fill="${statusColour}"/>`);
+    labelX = x + 25;
+  }
+
+  let right = x + w - 11;
+  if (item.owner && w > 150) {
+    out.push(`<circle cx="${r2(right - 10)}" cy="${r2(y + BAR / 2)}" r="10" fill="${accent}" fill-opacity="0.38"/>`);
+    out.push(text(right - 10, y + BAR / 2 + 3.5, initials(item.owner), {
+      size: 9.5, weight: 700, fill: theme.text, anchor: 'middle',
+    }));
+    right -= 26;
+  }
+  if (item.progress !== null && w > 116) {
+    const pct = `${Math.round(item.progress * 100)}%`;
+    out.push(text(right, y + BAR / 2 + 4, pct, { size: 11, weight: 600, fill: theme.muted, anchor: 'end' }));
+    right -= textWidth(pct, 11, 600) + 10;
+  }
+
+  const room = right - labelX - 6;
+  if (room > 24) {
+    out.push(text(labelX, y + BAR / 2 + 4.5, truncate(item.title, 13, room, 600), {
+      size: 13, weight: 600, fill: theme.text, opacity: item.status === 'done' || item.status === 'shipped' ? 0.72 : 1,
+    }));
+  }
+}
+
+/* ------------------------------------------------------------------ board  */
+
+function board(doc, theme, width, colors) {
+  const out = [];
+  const top = head(doc, theme, width, colors, out);
+  const lanes = doc.lanes.length ? doc.lanes : [{ name: '', items: [] }];
+
+  const gap = 18;
+  const colW = (width - PAD * 2 - gap * (lanes.length - 1)) / lanes.length;
+  const inner = colW - 28;
+
+  const columns = lanes.map((lane) => {
+    const cards = lane.items.map((item) => layoutCard(item, inner));
+    const height = 54 + cards.reduce((sum, c) => sum + c.height + 10, 0) + 4;
+    return { lane, cards, height };
+  });
+  const panelH = Math.max(120, ...columns.map((c) => c.height));
+
+  columns.forEach((col, i) => {
+    const x = PAD + i * (colW + gap);
+    const accent = colors.lane(col.lane);
+    out.push(rect(x, top, colW, panelH, 16, { fill: theme.lane }));
+    out.push(rect(x, top, colW, 3, 1.5, { fill: accent, opacity: 0.9 }));
+
+    out.push(text(x + 14, top + 30, truncate(col.lane.name || 'Untitled', 14, inner - 34, 700), {
+      size: 14, weight: 700, fill: theme.text,
+    }));
+    const count = String(col.lane.items.length);
+    out.push(text(x + colW - 14, top + 30, count, { size: 12, weight: 700, fill: theme.faint, anchor: 'end' }));
+
+    let y = top + 48;
+    col.cards.forEach((card) => {
+      drawCard(card, x + 14, y, inner, theme, colors.item(card.item, col.lane), out);
+      y += card.height + 10;
+    });
+  });
+
+  const end = foot(doc, theme, width, top + panelH, out);
+  return doc2svg(theme, width, Math.round(end), out.join(''));
+}
+
+function layoutCard(item, width) {
+  const pad = 13;
+  const titleLines = wrapText(item.title, 13.5, width - pad * 2 - 10, 600, 3);
+  const notes = item.notes.slice(0, 2);
+  const hasMeta = Boolean(item.owner) || item.progress !== null || Boolean(item.status);
+  const height =
+    pad +
+    titleLines.length * 19 +
+    notes.length * 16 +
+    (item.tags.length ? 24 : 0) +
+    (hasMeta ? 22 : 0) +
+    pad -
+    4;
+  return { item, titleLines, notes, hasMeta, height };
+}
+
+function drawCard(card, x, y, width, theme, accent, out) {
+  const { item, titleLines, notes, hasMeta } = card;
+  const pad = 13;
+  out.push(rect(x, y, width, card.height, 11, { fill: theme.panel }));
+  out.push(rect(x, y, 3, card.height, 1.5, { fill: accent, opacity: 0.95 }));
+  out.push(rect(x + 0.5, y + 0.5, width - 1, card.height - 1, 10.5, {
+    fill: 'none', stroke: theme.border, opacity: 0.85,
+  }));
+
+  let cursor = y + pad + 10;
+  const dim = item.status === 'done' || item.status === 'shipped';
+  titleLines.forEach((ln) => {
+    out.push(text(x + pad, cursor, ln, { size: 13.5, weight: 600, fill: theme.text, opacity: dim ? 0.78 : 1 }));
+    cursor += 19;
+  });
+  notes.forEach((note) => {
+    out.push(text(x + pad, cursor + 2, truncate(note, 11.5, width - pad * 2, 400), {
+      size: 11.5, fill: theme.muted,
+    }));
+    cursor += 16;
+  });
+
+  if (item.tags.length) {
+    let tx = x + pad;
+    for (const tag of item.tags.slice(0, 3)) {
+      const w = textWidth(tag, 10.5, 600) + 16;
+      if (tx + w > x + width - pad) break;
+      out.push(rect(tx, cursor + 2, w, 17, 8.5, { fill: accent, opacity: 0.18 }));
+      out.push(text(tx + w / 2, cursor + 14, tag, { size: 10.5, weight: 600, fill: theme.text, anchor: 'middle', opacity: 0.9 }));
+      tx += w + 6;
+    }
+    cursor += 24;
+  }
+
+  if (hasMeta) {
+    const statusColour = { done: theme.ok, shipped: theme.ok, risk: theme.warn, blocked: theme.danger }[item.status];
+    if (item.owner) {
+      out.push(`<circle cx="${r2(x + pad + 8)}" cy="${r2(cursor + 6)}" r="8" fill="${accent}" fill-opacity="0.34"/>`);
+      out.push(text(x + pad + 8, cursor + 9, initials(item.owner), {
+        size: 8.5, weight: 700, fill: theme.text, anchor: 'middle',
+      }));
+    }
+    if (item.progress !== null) {
+      const trackW = 56;
+      const tx = x + width - pad - trackW - 42;
+      out.push(rect(tx, cursor + 3, trackW, 6, 3, { fill: theme.grid, opacity: 0.5 }));
+      out.push(rect(tx, cursor + 3, Math.max(3, trackW * item.progress), 6, 3, { fill: statusColour || accent }));
+      out.push(text(x + width - pad, cursor + 10, `${Math.round(item.progress * 100)}%`, {
+        size: 10.5, weight: 600, fill: theme.muted, anchor: 'end',
+      }));
+    } else if (statusColour) {
+      out.push(text(x + width - pad, cursor + 10, item.status, {
+        size: 10.5, weight: 700, fill: statusColour, anchor: 'end', spacing: 0.4,
+      }));
+    }
+  }
+}
+
+/* ----------------------------------------------------------------- atoms   */
+
+function esc(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const r2 = (n) => Math.round(n * 100) / 100;
+
+function rect(x, y, w, h, r, o = {}) {
+  const attrs = [`x="${r2(x)}"`, `y="${r2(y)}"`, `width="${r2(Math.max(0, w))}"`, `height="${r2(Math.max(0, h))}"`, `rx="${r2(r)}"`];
+  attrs.push(`fill="${o.fill || 'none'}"`);
+  if (o.opacity != null && o.fill && o.fill !== 'none') attrs.push(`fill-opacity="${o.opacity}"`);
+  if (o.stroke) {
+    attrs.push(`stroke="${o.stroke}"`);
+    if (o.opacity != null && (!o.fill || o.fill === 'none')) attrs.push(`stroke-opacity="${o.opacity}"`);
+    if (o.dash) attrs.push(`stroke-dasharray="${o.dash}"`);
+  }
+  return `<rect ${attrs.join(' ')}/>`;
+}
+
+function line(x1, y1, x2, y2, stroke, o = {}) {
+  const attrs = [`x1="${r2(x1)}"`, `y1="${r2(y1)}"`, `x2="${r2(x2)}"`, `y2="${r2(y2)}"`, `stroke="${stroke}"`];
+  if (o.w) attrs.push(`stroke-width="${o.w}"`);
+  if (o.opacity != null) attrs.push(`stroke-opacity="${o.opacity}"`);
+  if (o.dash) attrs.push(`stroke-dasharray="${o.dash}"`);
+  return `<line ${attrs.join(' ')}/>`;
+}
+
+function text(x, y, value, o = {}) {
+  const attrs = [`x="${r2(x)}"`, `y="${r2(y)}"`, `fill="${o.fill}"`, `font-size="${o.size}"`];
+  if (o.weight) attrs.push(`font-weight="${o.weight}"`);
+  if (o.anchor) attrs.push(`text-anchor="${o.anchor}"`);
+  if (o.spacing) attrs.push(`letter-spacing="${o.spacing}"`);
+  if (o.opacity != null && o.opacity !== 1) attrs.push(`fill-opacity="${o.opacity}"`);
+  return `<text ${attrs.join(' ')}>${esc(value)}</text>`;
+}
+
+function initials(name) {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+/* --- end render.js --- */
+
+/* Browser shell. The renderer does the real work; this wires it to a textarea. */
+
+const uiEl = (id) => document.getElementById(id);
+const uiEditor = uiEl('editor');
+const uiStage = uiEl('stage');
+
+let uiCurrentSvg = '';
+
+/* ------------------------------------------------------------- persistence */
+
+// UTF-8 safe base64 for the URL hash, so a roadmap travels as a link and never
+// touches a server.
+function uiEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function uiDecode(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function uiLoadInitial() {
+  const hash = location.hash.match(/[#&]d=([^&]+)/);
+  if (hash) {
+    try {
+      return uiDecode(hash[1]);
+    } catch (err) {
+      /* fall through to the saved copy */
+    }
+  }
+  try {
+    const saved = localStorage.getItem('plotline:doc');
+    if (saved) return saved;
+  } catch (err) {
+    /* private mode: just use the example */
+  }
+  return PLOTLINE_EXAMPLES[PLOTLINE_EXAMPLE_ORDER[0]];
+}
+
+function uiSave(text) {
+  try {
+    localStorage.setItem('plotline:doc', text);
+  } catch (err) {
+    /* storage blocked; the document still lives in the textarea */
+  }
+}
+
+/* ------------------------------------------------------------------ render */
+
+function uiRender() {
+  const text = uiEditor.value;
+  uiSave(text);
+
+  let doc;
+  try {
+    doc = parse(text);
+  } catch (err) {
+    uiStatus('error', err.message, []);
+    return;
+  }
+
+  const themePick = uiEl('theme').value;
+  if (themePick && themePick !== 'auto') doc.theme = themePick;
+
+  try {
+    uiCurrentSvg = render(doc);
+    uiStage.innerHTML = uiCurrentSvg;
+  } catch (err) {
+    uiStatus('error', 'Could not draw this roadmap: ' + err.message, []);
+    return;
+  }
+
+  const count = doc.lanes.reduce((n, lane) => n + lane.items.length, 0);
+  const summary = `${count} item${count === 1 ? '' : 's'} · ${doc.lanes.length} ${
+    doc.mode === 'timeline' ? 'lane' : 'column'
+  }${doc.lanes.length === 1 ? '' : 's'}`;
+  uiStatus(doc.warnings.length ? 'warn' : 'ok', summary, doc.warnings);
+}
+
+function uiStatus(kind, message, warnings) {
+  const status = uiEl('status');
+  status.className = kind === 'ok' ? 'ok' : 'warn';
+  status.textContent = message;
+  uiEl('issues').innerHTML = warnings
+    .slice(0, 4)
+    .map((w) => `<span class="warn"><code>line ${w.line}</code> ${uiEscape(w.message)}</span>`)
+    .join('');
+}
+
+const uiEscape = (s) =>
+  String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ------------------------------------------------------------------ export */
+
+function uiDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const uiFilename = () => {
+  const title = (parse(uiEditor.value).title || 'roadmap').toLowerCase();
+  return title.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'roadmap';
+};
+
+// The SVG has no external references, so the canvas never taints and toBlob works.
+function uiToPng(scale = 2) {
+  return new Promise((resolve, reject) => {
+    const size = uiCurrentSvg.match(/width="(\d+)" height="(\d+)"/);
+    if (!size) return reject(new Error('nothing to export'));
+    const [w, h] = [Number(size[1]), Number(size[2])];
+    const blob = new Blob([uiCurrentSvg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((out) => (out ? resolve(out) : reject(new Error('export failed'))), 'image/png');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('export failed'));
+    };
+    img.src = url;
+  });
+}
+
+let uiToastTimer;
+function uiToast(message) {
+  const el = uiEl('toast');
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(uiToastTimer);
+  uiToastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+/* -------------------------------------------------------------------- wire */
+
+function uiBoot() {
+  const themeSelect = uiEl('theme');
+  themeSelect.innerHTML =
+    '<option value="auto">Theme: from file</option>' +
+    THEME_NAMES.map((name) => `<option value="${name}">${THEMES[name].label}</option>`).join('');
+
+  const exampleSelect = uiEl('example');
+  exampleSelect.innerHTML =
+    '<option value="">Examples…</option>' +
+    PLOTLINE_EXAMPLE_ORDER.map((name) => `<option value="${name}">${name}</option>`).join('');
+
+  uiEditor.value = uiLoadInitial();
+  uiRender();
+
+  let timer;
+  uiEditor.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(uiRender, 120);
+  });
+
+  // Tab indents instead of escaping the editor.
+  uiEditor.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const { selectionStart: s, selectionEnd: t, value } = uiEditor;
+      uiEditor.value = value.slice(0, s) + '  ' + value.slice(t);
+      uiEditor.selectionStart = uiEditor.selectionEnd = s + 2;
+      uiRender();
+    }
+  });
+
+  themeSelect.addEventListener('change', uiRender);
+  exampleSelect.addEventListener('change', (e) => {
+    const pick = e.target.value;
+    if (!pick) return;
+    uiEditor.value = PLOTLINE_EXAMPLES[pick];
+    e.target.value = '';
+    themeSelect.value = 'auto';
+    uiRender();
+  });
+
+  uiEl('svg').addEventListener('click', () => {
+    uiDownload(new Blob([uiCurrentSvg], { type: 'image/svg+xml' }), uiFilename() + '.svg');
+  });
+
+  uiEl('png').addEventListener('click', async () => {
+    try {
+      uiDownload(await uiToPng(2), uiFilename() + '.png');
+    } catch (err) {
+      uiToast(err.message);
+    }
+  });
+
+  uiEl('copy').addEventListener('click', async () => {
+    try {
+      const blob = await uiToPng(2);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      uiToast('PNG copied — paste it anywhere');
+    } catch (err) {
+      uiToast('Clipboard blocked here — use the PNG button');
+    }
+  });
+
+  uiEl('share').addEventListener('click', async () => {
+    const url = location.origin + location.pathname + '#d=' + uiEncode(uiEditor.value);
+    history.replaceState(null, '', url);
+    try {
+      await navigator.clipboard.writeText(url);
+      uiToast('Link copied — the roadmap travels inside it');
+    } catch (err) {
+      uiToast('Link is in the address bar');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      uiEl('svg').click();
+    }
+  });
+
+  // Drop a .md file straight onto the editor.
+  uiEditor.addEventListener('dragover', (e) => e.preventDefault());
+  uiEditor.addEventListener('drop', async (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    e.preventDefault();
+    uiEditor.value = await file.text();
+    uiRender();
+  });
+
+  uiSplitter();
+}
+
+function uiSplitter() {
+  const grip = uiEl('grip');
+  const main = document.querySelector('main');
+  let dragging = false;
+
+  const move = (event) => {
+    if (!dragging) return;
+    const vertical = window.innerWidth <= 860;
+    const rect = main.getBoundingClientRect();
+    const point = event.touches ? event.touches[0] : event;
+    const ratio = vertical
+      ? (point.clientY - rect.top) / rect.height
+      : (point.clientX - rect.left) / rect.width;
+    const clamped = Math.min(0.8, Math.max(0.15, ratio));
+    const percent = `${(clamped * 100).toFixed(2)}%`;
+    if (vertical) main.style.gridTemplateRows = `${percent} 6px minmax(0, 1fr)`;
+    else main.style.setProperty('--split', percent);
+  };
+
+  const stop = () => {
+    dragging = false;
+    grip.classList.remove('active');
+    document.body.style.userSelect = '';
+  };
+
+  grip.addEventListener('mousedown', () => {
+    dragging = true;
+    grip.classList.add('active');
+    document.body.style.userSelect = 'none';
+  });
+  grip.addEventListener('touchstart', () => {
+    dragging = true;
+  }, { passive: true });
+  window.addEventListener('mousemove', move);
+  window.addEventListener('touchmove', move, { passive: true });
+  window.addEventListener('mouseup', stop);
+  window.addEventListener('touchend', stop);
+}
+
+uiBoot();
+/* --- end app.js --- */
+
+})();</script>
+</body>
+</html>
