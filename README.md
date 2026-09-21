@@ -13,7 +13,7 @@ Write your roadmap as a few lines of Markdown. Get something you can put in fron
 [![CI](https://github.com/umeramin99/plotline/actions/workflows/ci.yml/badge.svg)](https://github.com/umeramin99/plotline/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-black)
-![size](https://img.shields.io/badge/app-51%20kB-black)
+![size](https://img.shields.io/badge/app-52%20kB-black)
 
 </div>
 
@@ -64,26 +64,51 @@ Plotline puts the roadmap in your repo as a text file:
 ## Use it
 
 **In the browser.** Go to [the editor](https://umeramin99.github.io/plotline/),
-type, export PNG or SVG. The page is a single 51 kB HTML file — save it and it
+type, export PNG or SVG. The page is a single 52 kB HTML file — save it and it
 works on a plane. Nothing is uploaded, because there is nowhere to upload to.
 
-**In the terminal.** No install, no dependencies:
+**In the terminal.** Nothing to install and nothing to configure:
 
 ```bash
-npx plotline roadmap.md -o roadmap.svg
-npx plotline roadmap.md --theme slate --width 1600 -o wide.svg
-npx plotline roadmap.md --check     # exit 1 if the file has problems
+npx github:umeramin99/plotline roadmap.md -o roadmap.svg
+npx github:umeramin99/plotline roadmap.md --theme slate --width 1600 -o wide.svg
+npx github:umeramin99/plotline roadmap.md --check   # exit 1 if the file has problems
 ```
 
+Or clone it and run `node bin/plotline.mjs` directly — there are no dependencies
+to install either way.
+
 **In CI.** Keep a rendered roadmap in your README that updates itself on every
-push. Copy [`.github/workflows/roadmap.yml`](.github/workflows/roadmap.yml)
-into your repo, add `roadmap.md`, and put this in your README:
+push. Add `roadmap.md` to your repo and this workflow:
+
+```yaml
+name: Roadmap
+on:
+  push:
+    branches: [main]
+    paths: ['roadmap.md']
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: umeramin99/plotline@v1
+        with:
+          input: roadmap.md
+          output: assets/roadmap.svg
+```
+
+Then put this in your README:
 
 ```markdown
 ![Roadmap](assets/roadmap.svg)
 ```
 
 That is the whole loop: edit the text, merge the PR, the picture updates.
+The Action commits the SVG only when it actually changed, so quiet pushes stay
+quiet. Every input is listed in [`action.yml`](action.yml).
 
 ## The format
 

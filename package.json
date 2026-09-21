@@ -1,5 +1,5 @@
 {
-  "name": "plotline",
+  "name": "plotline-md",
   "version": "0.1.0",
   "description": "Plain-text roadmaps, rendered. Write Markdown, get a roadmap you can put in front of anyone.",
   "type": "module",
@@ -14,7 +14,15 @@
   "bin": {
     "plotline": "bin/plotline.mjs"
   },
-  "files": ["src", "bin", "SPEC.md"],
+  "files": [
+    "src/index.js",
+    "src/parse.js",
+    "src/render.js",
+    "src/measure.js",
+    "src/themes.js",
+    "bin",
+    "SPEC.md"
+  ],
   "scripts": {
     "test": "node --test",
     "build": "node tools/build.mjs",
@@ -22,8 +30,22 @@
     "examples": "node tools/examples.mjs",
     "dev": "node tools/build.mjs && node -e \"console.log('open docs/index.html')\""
   },
-  "keywords": ["roadmap", "gantt", "svg", "markdown", "product", "planning", "now-next-later", "diagram-as-code"],
-  "engines": { "node": ">=18" },
-  "repository": { "type": "git", "url": "git+https://github.com/umeramin99/plotline.git" },
+  "keywords": [
+    "roadmap",
+    "gantt",
+    "svg",
+    "markdown",
+    "product",
+    "planning",
+    "now-next-later",
+    "diagram-as-code"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umeramin99/plotline.git"
+  },
   "homepage": "https://umeramin99.github.io/plotline/"
 }
