@@ -1,5 +1,10 @@
 # Publishes docs/ to GitHub Pages.
-# Enables Pages itself on the first successful run; no Settings visit needed.
+#
+# One-time setup: Settings -> Pages -> Build and deployment -> Source:
+# "GitHub Actions". A workflow cannot do this for you. configure-pages has an
+# `enablement` input, but creating a Pages site needs `administration: write`,
+# which GITHUB_TOKEN is never granted -- it fails with "Resource not accessible
+# by integration". Only an admin PAT can enable Pages from a workflow.
 name: Pages
 
 on:
@@ -29,11 +34,6 @@ jobs:
           node-version: '22'
       - run: npm run build
       - uses: actions/configure-pages@v5
-        with:
-          # Turns Pages on via the API rather than needing a visit to Settings.
-          # Pages is not available on private repos on the Free plan, so this
-          # step is what fails until the repository is public.
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
